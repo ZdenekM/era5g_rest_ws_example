@@ -1,7 +1,12 @@
-from flask import Flask, session, Response, request
-import flask_socketio
 import secrets
+import time
+from io import BytesIO
+
+import flask_socketio
+from flask import Flask, Response, request, session
+
 from flask_session import Session
+from image import image_from_bytes_io
 
 # https://blog.miguelgrinberg.com/post/flask-socketio-and-the-user-session
 # https://flask-socketio.readthedocs.io/en/latest/implementation_notes.html
@@ -62,7 +67,6 @@ def unregister():
 
 @socketio.on('connect', namespace='/results')
 def connect(auth):
-
     if 'registered' not in session:
         raise ConnectionRefusedError('Need to call /register first.')
 
@@ -73,6 +77,17 @@ def connect(auth):
     session_to_sid[session.sid] = sid
 
     flask_socketio.send("you are connected", namespace='/results', to=sid)
+
+
+@socketio.on('image', namespace='/data')
+def data_from_client(data):
+    if 'registered' not in session:
+        raise ConnectionRefusedError('Need to call /register first.')
+
+    img = image_from_bytes_io(BytesIO(data))
+    print(f"Received image, size {img.size}")
+
+    flask_socketio.send(f"{time.monotonic()}", namespace='/results', to=session_to_sid[session.sid])
 
 
 @socketio.event

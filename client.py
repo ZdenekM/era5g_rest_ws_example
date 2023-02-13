@@ -1,7 +1,10 @@
 import time
 
-import socketio
 import requests
+import socketio
+from PIL import Image
+
+from image import image_to_bytes_io
 
 # https://python-socketio.readthedocs.io/en/latest/client.html
 
@@ -30,14 +33,29 @@ def on_connect():
     print("I'm connected to the /results namespace!")
 
 
-def main():
+@sio.on('connect', namespace='/data')
+def on_connect():
+    print("I'm connected to the /data namespace!")
 
+    img = Image.open('hnojomet.jpg')
+
+    time.sleep(1)
+
+    while sio.connected:
+        print("Sending image...")
+        sio.emit('image', image_to_bytes_io(img).getvalue(), "/data")
+        time.sleep(1.0)
+
+    print("Done with sending images!")
+
+
+def main():
     resp = s.get(f"{HOST}/register")
     session_cookie = resp.cookies["session"]
     print(session_cookie)
 
     # session cookie has to be set to "pair" HTTP and WS connections
-    sio.connect(HOST, namespaces=['/results'], headers={'Cookie': f'session={session_cookie}'})
+    sio.connect(HOST, namespaces=['/results', '/data'], headers={'Cookie': f'session={session_cookie}'})
 
     print('my sid is', sio.sid)  # not sure why is this different from sid in the server (but it works)
 
